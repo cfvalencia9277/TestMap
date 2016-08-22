@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -37,7 +38,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
+public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, LocationListener {
 
 
     private GoogleMap mMap;
@@ -52,11 +53,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     View findmebtn;
     View addplacebtn;
     LocationManager lm;
-    LocationManager mylm;
     Location location;
     RecyclerView recyclerView;
     PlacesListAdapter adapter;
     View spotmebtn;
+    private String provider;
 
 
     @TargetApi(Build.VERSION_CODES.M)
@@ -74,7 +75,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         findmebtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.e("CLICKED", "FIND ME");
                 setmyposition();
             }
         });
@@ -82,7 +82,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         addplacebtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.e("CLICKED", "add ME");
                 addplace();
             }
         });
@@ -92,7 +91,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         spotmebtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.e("CLICKED", "SPOT ME");
                 Spotme();
             }
         });
@@ -102,7 +100,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         placesbtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.e("CLICKED", "PLACES");
                 placesView();
             }
         });
@@ -110,48 +107,33 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapviewbtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.e("CLICKED", "MAP");
                 mapView();
             }
         });
         recyclerView = (RecyclerView) findViewById(R.id.list);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         lm = (LocationManager) getSystemService(LOCATION_SERVICE);
-
+        Criteria criteria = new Criteria();
+        provider = lm.getBestProvider(criteria, false);
+        Location location = lm.getLastKnownLocation(provider);
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
         } else {
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 202);
         }
-        //if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {return;}
-        lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-
-        location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         if (location != null) {
             longitud = location.getLongitude();
             lattitude = location.getLatitude();
         }
     }
-
-    public LatLng getLocation() {
-        // Get the location manager
-        LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        Criteria criteria = new Criteria();
-        String bestProvider = locationManager.getBestProvider(criteria, false);
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)== PackageManager.PERMISSION_GRANTED) {
+    @TargetApi(Build.VERSION_CODES.M)
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
         } else {
-            requestPermissions( new String[]{Manifest.permission.ACCESS_FINE_LOCATION},202);
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 202);
         }
-        Location location = locationManager.getLastKnownLocation(bestProvider);
-        Double lat,lon;
-        try {
-            lat = location.getLatitude ();
-            lon = location.getLongitude ();
-            return new LatLng(lat, lon);
-        }
-        catch (NullPointerException e){
-            e.printStackTrace();
-            return null;
-        }
+        lm.requestLocationUpdates(provider, 400, 1, this);
     }
 
     @Override
@@ -178,20 +160,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void updateposition(boolean set, PlaceDB place){
         LatLng currentLocation;
         mMap.clear();
-
         if(!set){
-            /*
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)== PackageManager.PERMISSION_GRANTED) {
-            } else {
-                requestPermissions( new String[]{Manifest.permission.ACCESS_FINE_LOCATION},202);
-            }
-            location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            if(location!=null){
-                longitud = location.getLongitude();
-                lattitude = location.getLatitude();
-            }
-            */
-            currentLocation = getLocation();
+            currentLocation = new LatLng(lattitude, longitud);
         }else {
             currentLocation = new LatLng(place.getLat(), place.getLongitud());
         }
@@ -342,14 +312,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @TargetApi(Build.VERSION_CODES.M)
     public void Spotme(){
         ArrayList<Float> distances = new ArrayList<>();
-        /*
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)== PackageManager.PERMISSION_GRANTED) {
-        } else {
-            requestPermissions( new String[]{Manifest.permission.ACCESS_FINE_LOCATION},202);
-        }
-        */
-       // Location thislocation = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        LatLng thislatlong = getLocation();
+        LatLng thislatlong = new LatLng(lattitude, longitud);
         Location thislocation = new Location("current");
         thislocation.setLongitude(thislatlong.longitude);
         thislocation.setLatitude(thislatlong.latitude);
@@ -366,6 +329,39 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         Toast.makeText(MapsActivity.this,"Nearest Place to you: "+places.get(minIndex).getNamePlace()+
                 " at: "+distances.get(minIndex).toString()+" mt.",Toast.LENGTH_LONG).show();
 
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+            longitud = location.getLongitude();
+            lattitude = location.getLatitude();
+    }
+    @TargetApi(Build.VERSION_CODES.M)
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)== PackageManager.PERMISSION_GRANTED) {
+        } else {
+            requestPermissions( new String[]{Manifest.permission.ACCESS_FINE_LOCATION},202);
+        }
+        lm.removeUpdates(this);
+    }
+
+    @Override
+    public void onStatusChanged(String s, int i, Bundle bundle) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String s) {
+        Toast.makeText(this, "Enabled new provider " + provider,
+                Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onProviderDisabled(String s) {
+        Toast.makeText(this, "Disabled provider " + provider,
+                Toast.LENGTH_SHORT).show();
     }
 
     public class AsyncDBTask extends AsyncTask<List<PlaceDB>,Void,List<PlaceDB>> {
