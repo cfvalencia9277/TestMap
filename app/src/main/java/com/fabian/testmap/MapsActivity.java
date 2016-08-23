@@ -1,29 +1,18 @@
 package com.fabian.testmap;
 
-import android.Manifest;
-import android.annotation.TargetApi;
 import android.app.Dialog;
-import android.content.Context;
-import android.content.pm.PackageManager;
-import android.location.Criteria;
+import android.content.Intent;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import com.fabian.testmap.Adapters.PlacesListAdapter;
 import com.fabian.testmap.Utils.PlaceDB;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -33,13 +22,12 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.orm.SugarContext;
-
+import com.schibstedspain.leku.LocationPickerActivity;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, LocationListener {
-
+public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     View saved_line;
@@ -52,15 +40,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     double lattitude;
     View findmebtn;
     View addplacebtn;
-    LocationManager lm;
-    Location location;
     RecyclerView recyclerView;
     PlacesListAdapter adapter;
     View spotmebtn;
-    private String provider;
 
-
-    @TargetApi(Build.VERSION_CODES.M)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,25 +68,24 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 addplace();
             }
         });
-        //View rootview = findViewById(R.id.toolbar_main);
-        //rootview.bringToFront();
-        spotmebtn = findViewById(R.id.spotme_btn);
+        View rootview = findViewById(R.id.toolbar_main);
+        spotmebtn = rootview.findViewById(R.id.spotme_btn);
         spotmebtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Spotme();
             }
         });
-        saved_line = findViewById(R.id.save_places_bottom_line);
-        places_line = findViewById(R.id.show_places_bottom_line);
-        placesbtn = (TextView) findViewById(R.id.showplacesbtn);
+        saved_line = rootview.findViewById(R.id.save_places_bottom_line);
+        places_line = rootview.findViewById(R.id.show_places_bottom_line);
+        placesbtn = (TextView) rootview.findViewById(R.id.showplacesbtn);
         placesbtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 placesView();
             }
         });
-        mapviewbtn = (TextView) findViewById(R.id.savedplacebtn);
+        mapviewbtn = (TextView) rootview.findViewById(R.id.savedplacebtn);
         mapviewbtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -112,52 +94,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
         recyclerView = (RecyclerView) findViewById(R.id.list);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        lm = (LocationManager) getSystemService(LOCATION_SERVICE);
-        Criteria criteria = new Criteria();
-        provider = lm.getBestProvider(criteria, false);
-        Location location = lm.getLastKnownLocation(provider);
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-        } else {
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 202);
-        }
-        if (location != null) {
-            longitud = location.getLongitude();
-            lattitude = location.getLatitude();
-        }
     }
-    @TargetApi(Build.VERSION_CODES.M)
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-        } else {
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 202);
-        }
-        lm.requestLocationUpdates(provider, 400, 1, this);
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == 202) {
-            if (permissions.length == 1 &&
-                    permissions[0] == Manifest.permission.ACCESS_FINE_LOCATION &&
-                    grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            } else {
-                // Permission was denied. Display an error message.
-                Toast.makeText(MapsActivity.this,"Permission was denied",Toast.LENGTH_LONG).show();
-            }
-        }
-    }
-
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        LatLng currentLocation = new LatLng(lattitude, longitud);
-        mMap.addMarker(new MarkerOptions().position(currentLocation));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
+        setmyposition();
     }
-    @TargetApi(Build.VERSION_CODES.M)
     public void updateposition(boolean set, PlaceDB place){
+        Intent intent = new Intent(this, LocationPickerActivity.class);
+        startActivityForResult(intent, 1);
         LatLng currentLocation;
         mMap.clear();
         if(!set){
@@ -166,7 +111,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             currentLocation = new LatLng(place.getLat(), place.getLongitud());
         }
         mMap.addMarker(new MarkerOptions().position(currentLocation).title(place.getNamePlace()));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,16.0f));
     }
     public void mapView(){
         findmebtn.setVisibility(View.VISIBLE);
@@ -194,15 +139,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         updateposition(false,place);
     }
     public void addplace() {
-        // custom dialog
         final Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.dialog_add_photo_view);
         dialog.setTitle("ADD name to this place");
-        // set the custom dialog components - text, image and button
         final EditText nameET = (EditText) dialog.findViewById(R.id.text);
         final EditText citynameeET = (EditText) dialog.findViewById(R.id.text2);
         Button dialogButton = (Button) dialog.findViewById(R.id.dialogButtonCancel);
-        // if button is clicked, close the custom dialog
         dialogButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -210,7 +152,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
         Button dialogButton2 = (Button) dialog.findViewById(R.id.dialogButtonADD);
-        // if button is clicked, close the custom dialog
         dialogButton2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -233,16 +174,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
     public void dialogEdit(PlaceDB place){
         final PlaceDB placediag = place;
-        // custom dialog
         final Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.dialog_edit_place);
         dialog.setTitle(R.string.edit_place);
-
-        // set the custom dialog components - text, image and button
         final EditText nameET = (EditText) dialog.findViewById(R.id.edittext);
         final EditText citynameeET = (EditText) dialog.findViewById(R.id.edittext2);
         Button dialogButton = (Button) dialog.findViewById(R.id.dialogButtonCancelEdit);
-        // if button is clicked, close the custom dialog
         dialogButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -250,7 +187,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
         Button dialogButton2 = (Button) dialog.findViewById(R.id.dialogButtonEdit);
-        // if button is clicked, close the custom dialog
         dialogButton2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -266,13 +202,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
     public void dialogErase(PlaceDB place){
         final PlaceDB placediag = place;
-        // custom dialog
         final Dialog dialog = new Dialog(this);
         dialog.setContentView(R.layout.dialog_erase);
         dialog.setTitle(R.string.erase_place);
-
         Button dialogButton = (Button) dialog.findViewById(R.id.dialogButtonCancelErase);
-        // if button is clicked, close the custom dialog
         dialogButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -280,7 +213,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
         Button dialogButton2 = (Button) dialog.findViewById(R.id.dialogButtonErase);
-        // if button is clicked, close the custom dialog
         dialogButton2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -309,61 +241,30 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         placesView();
     }
-    @TargetApi(Build.VERSION_CODES.M)
     public void Spotme(){
-        ArrayList<Float> distances = new ArrayList<>();
-        LatLng thislatlong = new LatLng(lattitude, longitud);
-        Location thislocation = new Location("current");
-        thislocation.setLongitude(thislatlong.longitude);
-        thislocation.setLatitude(thislatlong.latitude);
         List<PlaceDB> places = PlaceDB.listAll(PlaceDB.class);
-        for(int i=0;i<places.size();i++){
-            Location testlocation = new Location("test");
-            testlocation.setLatitude(places.get(i).getLat());
-            testlocation.setLongitude(places.get(i).getLongitud());
-            float distance = thislocation.distanceTo(testlocation);
-            distances.add(distance);
+        if(places.isEmpty()){
+            Toast.makeText(MapsActivity.this,"No places saved",Toast.LENGTH_LONG).show();
+        }else{
+            setmyposition();
+            ArrayList<Float> distances = new ArrayList<>();
+            LatLng thislatlong = new LatLng(lattitude, longitud);
+            Location thislocation = new Location("current");
+            thislocation.setLongitude(thislatlong.longitude);
+            thislocation.setLatitude(thislatlong.latitude);
+            for(int i=0;i<places.size();i++){
+                Location testlocation = new Location("test");
+                testlocation.setLatitude(places.get(i).getLat());
+                testlocation.setLongitude(places.get(i).getLongitud());
+                float distance = thislocation.distanceTo(testlocation);
+                distances.add(distance);
+            }
+            int minIndex = distances.indexOf(Collections.min(distances));
+            updateposition(true,places.get(minIndex));
+            Toast.makeText(MapsActivity.this,"Nearest Place to you: "+places.get(minIndex).getNamePlace()+
+                    " at: "+distances.get(minIndex).toString()+" mt.",Toast.LENGTH_LONG).show();
         }
-        int minIndex = distances.indexOf(Collections.min(distances));
-        updateposition(true,places.get(minIndex));
-        Toast.makeText(MapsActivity.this,"Nearest Place to you: "+places.get(minIndex).getNamePlace()+
-                " at: "+distances.get(minIndex).toString()+" mt.",Toast.LENGTH_LONG).show();
-
     }
-
-    @Override
-    public void onLocationChanged(Location location) {
-            longitud = location.getLongitude();
-            lattitude = location.getLatitude();
-    }
-    @TargetApi(Build.VERSION_CODES.M)
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)== PackageManager.PERMISSION_GRANTED) {
-        } else {
-            requestPermissions( new String[]{Manifest.permission.ACCESS_FINE_LOCATION},202);
-        }
-        lm.removeUpdates(this);
-    }
-
-    @Override
-    public void onStatusChanged(String s, int i, Bundle bundle) {
-
-    }
-
-    @Override
-    public void onProviderEnabled(String s) {
-        Toast.makeText(this, "Enabled new provider " + provider,
-                Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onProviderDisabled(String s) {
-        Toast.makeText(this, "Disabled provider " + provider,
-                Toast.LENGTH_SHORT).show();
-    }
-
     public class AsyncDBTask extends AsyncTask<List<PlaceDB>,Void,List<PlaceDB>> {
         @Override
         protected List<PlaceDB> doInBackground(List<PlaceDB>... lists) {
@@ -392,6 +293,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 });
                 recyclerView.setAdapter(adapter);
             }else {Toast.makeText(MapsActivity.this,"No Places Saved",Toast.LENGTH_LONG).show();}
+        }
+    }
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == 1) {
+            if(resultCode == RESULT_OK){
+                 lattitude = data.getDoubleExtra(LocationPickerActivity.LATITUDE, 0);
+                 longitud = data.getDoubleExtra(LocationPickerActivity.LONGITUDE, 0);
+            }
+            if (resultCode == RESULT_CANCELED) {
+            }
         }
     }
 

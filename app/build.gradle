@@ -28,4 +28,5 @@ dependencies {
     compile 'com.android.support:recyclerview-v7:24.2.0'
     compile 'com.android.support:support-v4:24.2.0'
     compile 'com.github.satyan:sugar:1.5'
+    compile 'com.schibstedspain.android:leku:1.0.0'
 }
